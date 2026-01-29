@@ -15,15 +15,17 @@ epsilon = 0.001;
 board_diameter = 210;  // mm
 board_thickness = 10;  // mm (accommodates deeper grooves + solid base)
 
+function scaled(distance) = distance * board_diameter / 194;
+
 /* [Tolerance - gap per side between planet and track] */
 tolerance = 0.2;  // mm; adjust for your printer
 
 /* [Planet Arc Spans (months; 1 month = 30 degrees)] */
-venus_span   = 5;
-mercury_span = 6;
-mars_span    = 2;
-jupiter_span = 2;
-saturn_span  = 1;
+mercury_span = 3.5;
+venus_span   = 2.5;
+mars_span    = 1.75;
+jupiter_span = 0.75;
+saturn_span  = 1/3;
 
 /* [Sun Peg] */
 sun_hole_diameter = 4;   // mm
@@ -31,9 +33,10 @@ sun_hole_depth   = 2 * board_thickness;    // mm
 sun_peg_above    = 8;    // mm peg extends above board surface
 
 /* [Layout] */
-zodiac_ring_width  = 17; // mm - radial width of outer zodiac ring
-center_void_radius = 18; // mm - solid center disc radius
-wall_thickness     = 2;  // mm - radial wall between adjacent tracks
+zodiac_ring_width  = scaled(23);
+                         // mm - radial width of outer zodiac ring
+center_void_radius = scaled(15.5); // mm - solid center disc radius
+wall_thickness     = 1;  // mm - radial wall between adjacent tracks
 
 /* [Pentagon Cross-Section] */
 // Groove depth doubled for deeper tracks; steeper angled sides
@@ -164,6 +167,10 @@ module board() {
         cyl(h = board_thickness, r = board_radius,
             anchor = BOTTOM, $fn = circle_fn);
 
+        // niche for moon thing
+        translate([0,0,board_thickness + epsilon])
+          cyl(h = 2, r = center_void_radius - 1, anchor = TOP, $fn = circle_fn);
+
         // Cut pentagon-shaped track grooves from top surface
         translate([0, 0, board_thickness + epsilon])
             for (i = [0 : num_tracks - 1])
@@ -211,7 +218,7 @@ module board() {
 // Planet arc: pentagon cross-section swept through an arc.
 // Planet protrudes above the board surface by planet_protrusion.
 // For standalone rendering, bottom is placed on build plate (z=0).
-module planet_arc(radius, span_months) {
+module planet_arc(radius, span_months, incised_months = 0.5) {
     arc_angle = span_months * month_angle;
     // Total height: protrusion above surface + groove portion below surface
     below_surface = pent_vertical_height + pent_angled_height - tolerance;
@@ -273,7 +280,7 @@ module render(part = "board") {
                                planet_arc(mars_r,    mars_span);
           color("orange")      rotate([0, 0, 30])
                                planet_arc(jupiter_r, jupiter_span);
-          color("slategray")   rotate([0, 0, 210])
+          color("slategray")   rotate([0, 0, 215])
                                planet_arc(saturn_r,  saturn_span);
           // Sun peg in one of the holes (month 0)
           color("gold")
@@ -289,4 +296,4 @@ module render(part = "board") {
   }
 }
 
-render("board");
+render("assembly");
