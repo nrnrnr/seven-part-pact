@@ -153,16 +153,29 @@ module board() {
                         anchor = BOTTOM, $fn = 32);
         }
 
-        // Incised month-boundary lines in the bottom of each orbit groove
+        // Incised month-boundary lines in groove floors (skip Saturn)
         for (m = [0 : num_months - 1]) {
             angle = m * month_angle;
             rotate([0, 0, angle])
-                for (i = [0 : num_tracks - 1]) {
+                for (i = [1 : num_tracks - 1]) {  // skip Saturn (index 0)
                     cr = track_cr(i);
-                    // Radial line incised into the groove floor
                     translate([cr, 0, board_thickness - groove_depth + 2 * epsilon])
                         cuboid([groove_width,
                                 line_width_month, line_depth],
+                               anchor = TOP);
+                }
+        }
+
+        // Mid-month lines in groove floors: all tracks use line_width_other.
+        // For Saturn (index 0) these are the only lines; shifted by half a month.
+        for (m = [0 : num_months - 1]) {
+            angle = m * month_angle + month_angle / 2;
+            rotate([0, 0, angle])
+                for (i = [0 : num_tracks - 1]) {
+                    cr = track_cr(i);
+                    translate([cr, 0, board_thickness - groove_depth + 2 * epsilon])
+                        cuboid([groove_width,
+                                line_width_other, line_depth],
                                anchor = TOP);
                 }
         }
