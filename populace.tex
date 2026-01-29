@@ -1,18 +1,70 @@
 \documentclass{article}
+\usepackage[margin=7mm]{geometry}
 \pagestyle{empty}
 \usepackage{graphicx}
+\usepackage{suffix}
 \usepackage{tikz}
+\usepackage{adjustbox}
 \begin{document}
 
 \begin{tikzpicture}[x=1mm,y=1mm]
 
-\node [anchor=south west] (all) at (0,0)
-      {\includegraphics[scale=0.5]{populace-blanks.png}};
+\node [anchor=south west] (all) at (-10,-21)
+      {\includegraphics[width=200mm]{populace-blanks.png}};
 
- \draw[step=1, gray!20] (0,0) grid (100,80);
-  \draw[step=10, gray!60, line width=0.4pt] (0,0) grid (100,80);
+% \draw[step=1, gray!20] (0,0) grid (100,120);
+%  \draw[step=10, gray!80, line width=0.4pt] (0,0) grid (100,120);
 
 \end{tikzpicture}
+
+\fboxsep=0pt
+
+\newcommand\coin[1]{\fbox{\adjustbox{clip, viewport=#1}{%
+   \includegraphics[width=200mm]{populace-blanks.png}}}}
+
+
+\raggedright
+
+%Peasant: \coin{8.2mm 112mm 27.2mm 129.8mm}
+%\qquad
+%Pariah: \coin{8.2mm 76mm 27.2mm 94mm}
+%\qquad
+%Artisan: \coin{8.2mm 58.5mm 27.2mm 76mm}
+%\qquad
+%Merchant: \coin{46.6mm 40.5mm 65.2mm 58.2mm}
+%\qquad
+%Gentry: \coin{8.2mm 20mm 29.2mm 40.5mm}
+%
+%Peasant Heretic: \coin{102.2mm 112mm 121.2mm 129.3mm}
+%\qquad
+%Pariah Heretic: \coin{102.2mm 76mm 121.2mm 94mm}
+%\qquad
+%Artisan Heretic: \coin{102.2mm 58.5mm 121.2mm 76mm}
+%\qquad
+%Merchant Heretic: \coin{102.4mm 40.5mm 121.6mm 58.2mm}
+%\qquad
+%Gentry Heretic: \coin{102.2mm 20mm 124.6mm 40.5mm}
+
+\newcommand\peasantimage {\coin{8.2mm 112mm 27.2mm 129.8mm}}
+\newcommand\pariahimage  {\coin{8.2mm 76mm 27.2mm 94mm}}
+\newcommand\artisanimage {\coin{8.2mm 58.5mm 27.2mm 76mm}}
+\newcommand\merchantimage{\coin{46.6mm 40.5mm 65.2mm 58.2mm}}
+\newcommand\gentryimage  {\coin{8.2mm 20mm 29.2mm 40.5mm}}
+
+\WithSuffix\newcommand\peasantimage *{\coin{102.2mm 112mm 121.2mm 129.3mm}}
+\WithSuffix\newcommand\pariahimage  *{\coin{102.2mm 76mm 121.2mm 94mm}}
+\WithSuffix\newcommand\artisanimage *{\coin{102.2mm 58.5mm 121.2mm 76mm}}
+\WithSuffix\newcommand\merchantimage*{\coin{102.4mm 40.5mm 121.6mm 58.2mm}}
+\WithSuffix\newcommand\gentryimage  *{\coin{102.2mm 20mm 124.6mm 40.5mm}}
+
+\peasantimage\ \pariahimage\ \artisanimage\ \merchantimage\ \gentryimage
+
+\peasantimage*\ \pariahimage*\ \artisanimage*\ \merchantimage*\ \gentryimage*
+
+
+
+
+
 \end{document}
 
 
