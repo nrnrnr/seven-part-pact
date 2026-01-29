@@ -298,4 +298,6 @@ module render(part = "board") {
   }
 }
 
-render("assembly");
+mything = "assembly";
+
+render(mything);
