@@ -226,6 +226,14 @@ module planet_arc(radius, span_months, incised_months = 0.5) {
     translate([0, 0, below_surface])
         rotate_extrude(angle = arc_angle, $fn = circle_fn)
             planet_profile_2d(radius);
+
+    intersection() {
+      incised_lines(radius, n = 24 / incised_months, depths=[0.4], surface_z = 0,
+                    length = 0.9 * pent_bottom_width);
+      rotate_extrude(angle = arc_angle, $fn = circle_fn)
+        translate([radius,0])
+          polygon([ [10,10], [-10, 10], [-10, -10], [10, -10]]);
+    }
 }
 
 // ---- Sun peg ----
