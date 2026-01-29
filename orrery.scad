@@ -9,13 +9,15 @@
 
 include <BOSL2/std.scad>
 
+epsilon = 0.001;
+
 /* [Render Control] */
 // Which part to render for STL export
 render_part = "board"; // [board, venus, mercury, mars, jupiter, saturn, sun, assembly]
 
 /* [Board Dimensions] */
 board_diameter = 210;  // mm
-board_thickness = 8;   // mm
+board_thickness = 10;  // mm (accommodates deeper grooves + solid base)
 
 /* [Tolerance - gap per side between planet and track] */
 tolerance = 0.2;  // mm; adjust for your printer
@@ -38,9 +40,20 @@ center_void_radius = 18; // mm - solid center disc radius
 wall_thickness     = 2;  // mm - radial wall between adjacent tracks
 
 /* [Pentagon Cross-Section] */
-pent_vertical_height = 3;    // mm - vertical-wall portion of pentagon
-pent_angled_height   = 2;    // mm - angled-closing portion of pentagon
-pent_bottom_fraction = 0.45; // bottom width as fraction of top width
+// Groove depth doubled for deeper tracks; steeper angled sides
+pent_vertical_height = 2;    // mm - vertical-wall portion of pentagon
+pent_angled_height   = 5;    // mm - angled-closing portion of pentagon
+pent_bottom_fraction = 0.40; // bottom width as fraction of top width (steeper sides)
+
+/* [Planet Protrusion] */
+// Planet arc top rises this far above the board surface
+planet_protrusion = 3;  // mm
+
+/* [Incised Lines] */
+// Fine lines marking month boundaries in grooves and on zodiac ring
+line_width_month = 1.0;  // mm
+line_width_other = line_width_month / 2;  // mm
+line_depth = 1.2;  // mm
 
 /* [Resolution] */
 circle_fn = 360;
@@ -97,16 +110,19 @@ module groove_profile_2d(radius) {
 // Planet arc profile: reduced by tolerance so it slides freely.
 // Width narrowed by tolerance per side; height shortened by tolerance
 // at bottom so the arc doesn't bottom out in the groove.
+// Extends above y=0 (board surface) by planet_protrusion.
 module planet_profile_2d(radius) {
     t   = tolerance;
     hw  = groove_width / 2 - t;
     hbw = pent_bottom_width / 2 - t;
     vh  = pent_vertical_height;
     ah  = pent_angled_height - t;
+    pp  = planet_protrusion;
+    // y=0 is the board surface; planet extends above and below
     translate([radius, 0])
         polygon([
-            [-hw,  0],
-            [ hw,  0],
+            [-hw,  pp],
+            [ hw,  pp],
             [ hw,  -vh],
             [ hbw, -(vh + ah)],
             [-hbw, -(vh + ah)],
@@ -123,7 +139,7 @@ module board() {
             anchor = BOTTOM, $fn = circle_fn);
 
         // Cut pentagon-shaped track grooves from top surface
-        translate([0, 0, board_thickness])
+        translate([0, 0, board_thickness + epsilon])
             for (i = [0 : num_tracks - 1])
                 rotate_extrude($fn = circle_fn)
                     groove_profile_2d(track_cr(i));
@@ -136,19 +152,45 @@ module board() {
                     cyl(h = sun_hole_depth + 0.1, d = sun_hole_diameter,
                         anchor = BOTTOM, $fn = 32);
         }
+
+        // Incised month-boundary lines in the bottom of each orbit groove
+        for (m = [0 : num_months - 1]) {
+            angle = m * month_angle;
+            rotate([0, 0, angle])
+                for (i = [0 : num_tracks - 1]) {
+                    cr = track_cr(i);
+                    // Radial line incised into the groove floor
+                    translate([cr, 0, board_thickness - groove_depth + 2 * epsilon])
+                        cuboid([groove_width,
+                                line_width_month, line_depth],
+                               anchor = TOP);
+                }
+        }
+
+        // Twelve radial divider lines on the zodiac ring surface
+        for (m = [0 : num_months - 1]) {
+            angle = m * month_angle;
+            rotate([0, 0, angle])
+                // Radial line incised into the zodiac ring surface
+                translate([zodiac_inner_r-1, 0, board_thickness+epsilon])
+                    cuboid([zodiac_ring_width,
+                            line_width_month, line_depth],
+                           anchor = TOP+LEFT);
+        }
     }
 }
 
 // ---- Planet arcs ----
 
 // Planet arc: pentagon cross-section swept through an arc.
-// Oriented for display (top at z=0, extends downward).
-// For printing, the slicer can reorient as needed.
+// Planet protrudes above the board surface by planet_protrusion.
+// For standalone rendering, bottom is placed on build plate (z=0).
 module planet_arc(radius, span_months) {
     arc_angle = span_months * month_angle;
-    planet_h = pent_vertical_height + pent_angled_height - tolerance;
+    // Total height: protrusion above surface + groove portion below surface
+    below_surface = pent_vertical_height + pent_angled_height - tolerance;
     // Place bottom on build plate: translate so bottom is at z=0
-    translate([0, 0, planet_h])
+    translate([0, 0, below_surface])
         rotate_extrude(angle = arc_angle, $fn = circle_fn)
             planet_profile_2d(radius);
 }
@@ -195,7 +237,8 @@ else if (render_part == "sun") {
 else if (render_part == "assembly") {
     // Visualization: board with all planets in arbitrary positions
     color("burlywood") board();
-    translate([0, 0, board_thickness]) {
+    // Planets sit in grooves; their z=0 (bottom) aligns with groove bottom
+    translate([0, 0, board_thickness - groove_depth]) {
         color("green")       planet_arc(venus_r,   venus_span);
         color("mediumpurple") rotate([0, 0, 60])
                              planet_arc(mercury_r, mercury_span);
@@ -208,7 +251,12 @@ else if (render_part == "assembly") {
         // Sun peg in one of the holes (month 0)
         color("gold")
             rotate([0, 0, month_angle / 2])
-                translate([sun_hole_r, 0, -sun_hole_depth])
+                translate([sun_hole_r, 0, groove_depth - sun_hole_depth])
                     sun_peg();
     }
+} else if (render_part == "slice") {
+  intersection() {
+    board();
+    cuboid(p1=[-200,-10,-1],p2=[200,10,board_thickness+1]);
+  }
 }
