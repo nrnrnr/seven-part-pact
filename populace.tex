@@ -1,0 +1,19 @@
+\documentclass{article}
+\pagestyle{empty}
+\usepackage{graphicx}
+\usepackage{tikz}
+\begin{document}
+
+\begin{tikzpicture}[x=1mm,y=1mm]
+
+\node [anchor=south west] (all) at (0,0)
+      {\includegraphics[scale=0.5]{populace-blanks.png}};
+
+ \draw[step=1, gray!20] (0,0) grid (100,80);
+  \draw[step=10, gray!60, line width=0.4pt] (0,0) grid (100,80);
+
+\end{tikzpicture}
+\end{document}
+
+
+
