@@ -11,10 +11,6 @@ include <BOSL2/std.scad>
 
 epsilon = 0.001;
 
-/* [Render Control] */
-// Which part to render for STL export
-render_part = "board"; // [board, venus, mercury, mars, jupiter, saturn, sun, assembly]
-
 /* [Board Dimensions] */
 board_diameter = 210;  // mm
 board_thickness = 10;  // mm (accommodates deeper grooves + solid base)
@@ -30,8 +26,8 @@ jupiter_span = 2;
 saturn_span  = 1;
 
 /* [Sun Peg] */
-sun_hole_diameter = 5;   // mm
-sun_hole_depth   = 5;    // mm
+sun_hole_diameter = 4;   // mm
+sun_hole_depth   = 2 * board_thickness;    // mm
 sun_peg_above    = 8;    // mm peg extends above board surface
 
 /* [Layout] */
@@ -50,10 +46,9 @@ pent_bottom_fraction = 0.40; // bottom width as fraction of top width (steeper s
 planet_protrusion = 3;  // mm
 
 /* [Incised Lines] */
-// Fine lines marking month boundaries in grooves and on zodiac ring
-line_width_month = 1.0;  // mm
-line_width_other = line_width_month / 2;  // mm
-line_depth = 1.2;  // mm
+// V-groove lines marking month boundaries in grooves and on zodiac ring.
+// depth controls the size of the 45°-rotated cuboid (and thus V width and depth).
+line_depth = 1.2;  // mm - cuboid side length; V cuts to depth/sqrt(2)
 
 /* [Resolution] */
 circle_fn = 360;
@@ -81,11 +76,12 @@ function track_cr(i) =
 saturn_r  = track_cr(0);
 jupiter_r = track_cr(1);
 mars_r    = track_cr(2);
-mercury_r = track_cr(3);
-venus_r   = track_cr(4);
+venus_r   = track_cr(3);
+mercury_r = track_cr(4);
+zodiac_r  = zodiac_inner_r + zodiac_ring_width / 2 - wall_thickness/2;
 
 // Sun hole radial position: centered in zodiac ring
-sun_hole_r = zodiac_inner_r + zodiac_ring_width / 2;
+sun_hole_r = board_radius - 2 - sun_hole_diameter / 2;
 
 // ---- Pentagon profiles (2D, for rotate_extrude) ----
 
@@ -130,6 +126,36 @@ module planet_profile_2d(radius) {
         ]);
 }
 
+// ---- Incised V-groove lines ----
+
+// Places n V-groove lines evenly around a circle at given radius.
+// Lines are radial cuts (along the radius direction).
+//   radius:  center radius of the circle of lines
+//   length:  radial extent of each line (default: groove_width)
+//   depths:  list of depths to cycle through (default: [line_depth])
+//   n:       number of lines around the circle (default: 12)
+//   offset:  angular offset in degrees (default: 0)
+//   surface_z: z coordinate of the surface being incised
+//              (default: board top, i.e., board_thickness)
+//
+// V-shape is a cuboid rotated 45° around its long (radial) axis.
+module incised_lines(radius,
+                     n = 12,
+                     length = pent_bottom_width,
+                     depths = [1], 
+                     offset = 0,
+                     surface_z = board_thickness - groove_depth) {
+    angle_step = 360 / n;
+    for (i = [0 : n - 1]) {
+        d = line_depth * depths[i % len(depths)];  // cycle through depth list
+        rotate([0, 0, offset + i * angle_step])
+            translate([radius, 0, surface_z])
+                // Rotate cuboid 45° around X (radial axis) for V-groove
+                rotate([45, 0, 0])
+                    cuboid([length, 1.414 * d, 1.414 * d]);
+    }
+}
+
 // ---- Board ----
 
 module board() {
@@ -153,43 +179,30 @@ module board() {
                         anchor = BOTTOM, $fn = 32);
         }
 
-        // Incised month-boundary lines in groove floors (skip Saturn)
-        for (m = [0 : num_months - 1]) {
-            angle = m * month_angle;
-            rotate([0, 0, angle])
-                for (i = [1 : num_tracks - 1]) {  // skip Saturn (index 0)
-                    cr = track_cr(i);
-                    translate([cr, 0, board_thickness - groove_depth + 2 * epsilon])
-                        cuboid([groove_width,
-                                line_width_month, line_depth],
-                               anchor = TOP);
-                }
-        }
+        incised_lines(mercury_r, 24, depths=[1,0.5]);
+        incised_lines(venus_r,   24, depths=[1,0.5]);
+        incised_lines(mars_r,    48, depths=[1,0.5,0.5,0.5]);
+        incised_lines(jupiter_r, 48, depths=[1,0.5,0.5,0.5]);
+        incised_lines(saturn_r,  36, depths=[0.5], offset=5);
+        incised_lines(saturn_r,  36, depths=[0.5], offset=5);
+        incised_lines(zodiac_r,  12, depths=[1], surface_z = board_thickness,
+                      length = zodiac_ring_width);
 
-        // Mid-month lines in groove floors: all tracks use line_width_other.
-        // For Saturn (index 0) these are the only lines; shifted by half a month.
-        for (m = [0 : num_months - 1]) {
-            angle = m * month_angle + month_angle / 2;
-            rotate([0, 0, angle])
-                for (i = [0 : num_tracks - 1]) {
-                    cr = track_cr(i);
-                    translate([cr, 0, board_thickness - groove_depth + 2 * epsilon])
-                        cuboid([groove_width,
-                                line_width_other, line_depth],
-                               anchor = TOP);
-                }
-        }
 
-        // Twelve radial divider lines on the zodiac ring surface
-        for (m = [0 : num_months - 1]) {
-            angle = m * month_angle;
-            rotate([0, 0, angle])
-                // Radial line incised into the zodiac ring surface
-                translate([zodiac_inner_r-1, 0, board_thickness+epsilon])
-                    cuboid([zodiac_ring_width,
-                            line_width_month, line_depth],
-                           anchor = TOP+LEFT);
-        }
+//        for (i = [1 : num_tracks - 1])
+//            incised_lines(track_cr(i), depths = [line_depth],
+//                          surface_z = groove_surface);
+//
+//        // Mid-month lines in all groove floors (shifted by half a month).
+//        // For Saturn (index 0) these are its only lines.
+//        for (i = [0 : num_tracks - 1])
+//            incised_lines(track_cr(i), depths = [line_depth],
+//                          offset = month_angle / 2,
+//                          surface_z = groove_surface);
+//
+//        // Twelve radial divider lines on the zodiac ring surface
+//        incised_lines(zodiac_inner_r + zodiac_ring_width / 2,
+//                      length = zodiac_ring_width);
     }
 }
 
@@ -226,50 +239,54 @@ module sun_peg() {
 
 // ---- Render selected part ----
 
-if (render_part == "board") {
-    board();
-}
-else if (render_part == "venus") {
-    planet_arc(venus_r, venus_span);
-}
-else if (render_part == "mercury") {
-    planet_arc(mercury_r, mercury_span);
-}
-else if (render_part == "mars") {
-    planet_arc(mars_r, mars_span);
-}
-else if (render_part == "jupiter") {
-    planet_arc(jupiter_r, jupiter_span);
-}
-else if (render_part == "saturn") {
-    planet_arc(saturn_r, saturn_span);
-}
-else if (render_part == "sun") {
-    sun_peg();
-}
-else if (render_part == "assembly") {
-    // Visualization: board with all planets in arbitrary positions
-    color("burlywood") board();
-    // Planets sit in grooves; their z=0 (bottom) aligns with groove bottom
-    translate([0, 0, board_thickness - groove_depth]) {
-        color("green")       planet_arc(venus_r,   venus_span);
-        color("mediumpurple") rotate([0, 0, 60])
-                             planet_arc(mercury_r, mercury_span);
-        color("crimson")     rotate([0, 0, 150])
-                             planet_arc(mars_r,    mars_span);
-        color("orange")      rotate([0, 0, 30])
-                             planet_arc(jupiter_r, jupiter_span);
-        color("slategray")   rotate([0, 0, 210])
-                             planet_arc(saturn_r,  saturn_span);
-        // Sun peg in one of the holes (month 0)
-        color("gold")
-            rotate([0, 0, month_angle / 2])
-                translate([sun_hole_r, 0, groove_depth - sun_hole_depth])
-                    sun_peg();
+module render(part = "board") {
+  if (part == "board") {
+      board();
+  }
+  else if (part == "venus") {
+      planet_arc(venus_r, venus_span);
+  }
+  else if (part == "mercury") {
+      planet_arc(mercury_r, mercury_span);
+  }
+  else if (part == "mars") {
+      planet_arc(mars_r, mars_span);
+  }
+  else if (part == "jupiter") {
+      planet_arc(jupiter_r, jupiter_span);
+  }
+  else if (part == "saturn") {
+      planet_arc(saturn_r, saturn_span);
+  }
+  else if (part == "sun") {
+      sun_peg();
+  }
+  else if (part == "assembly") {
+      // Visualization: board with all planets in arbitrary positions
+      color("burlywood") board();
+      // Planets sit in grooves; their z=0 (bottom) aligns with groove bottom
+      translate([0, 0, board_thickness - groove_depth]) {
+          color("green")       planet_arc(venus_r,   venus_span);
+          color("mediumpurple") rotate([0, 0, 60])
+                               planet_arc(mercury_r, mercury_span);
+          color("crimson")     rotate([0, 0, 150])
+                               planet_arc(mars_r,    mars_span);
+          color("orange")      rotate([0, 0, 30])
+                               planet_arc(jupiter_r, jupiter_span);
+          color("slategray")   rotate([0, 0, 210])
+                               planet_arc(saturn_r,  saturn_span);
+          // Sun peg in one of the holes (month 0)
+          color("gold")
+              rotate([0, 0, month_angle / 2])
+                  translate([sun_hole_r, 0, groove_depth - sun_hole_depth])
+                      sun_peg();
+      }
+  } else if (part == "slice") {
+    intersection() {
+      board();
+      cuboid(p1=[-200,-10,-1],p2=[200,10,board_thickness+1]);
     }
-} else if (render_part == "slice") {
-  intersection() {
-    board();
-    cuboid(p1=[-200,-10,-1],p2=[200,10,board_thickness+1]);
   }
 }
+
+render("board");
