@@ -188,22 +188,30 @@ module board() {
             rotate([0, 0, angle])
                 translate([sun_hole_r, 0, board_thickness - sun_hole_depth])
                     cyl(h = sun_hole_depth + 0.1, d = sun_hole_diameter,
-                        anchor = BOTTOM, $fn = 32);
+                        anchor = BOTTOM);
         }
 
-        // Anti-warp voids under the zodiac ring, one per month.
-        // Thin rectangular slots (1mm tangential) spanning the zodiac ring
-        // cross-section.  Start at second layer, stop 10 layers from top.
+        // Anti-warp voids under the zodiac ring, one cross per month.
+        // Two crossing thin slots resist warpage in orthogonal directions.
+        // Start at second layer, stop 10 layers from top.
         void_bottom = 2 * layer_height;
-        void_top    = board_thickness - 10 * layer_height;
+        void_top    = board_thickness - 20 * layer_height;
         void_height = void_top - void_bottom;
+        void_radial = zodiac_ring_width - 2;
+        void_thick  = 1;  // mm - slot thickness
+        void_angle_offset = 0;
         for (m = [0 : num_months - 1]) {
-            angle = m * month_angle + month_angle / 2;
+            angle = m * month_angle + void_angle_offset;
             rotate([0, 0, angle])
-                translate([zodiac_inner_r + zodiac_ring_width / 2,
-                           0, void_bottom])
-                    cuboid([zodiac_ring_width - 2, 1, void_height],
+                translate([zodiac_inner_r + zodiac_ring_width / 2 - 2,
+                           0, void_bottom]) {
+                    // Radial slot (tangentially thin)
+                    cuboid([void_radial-4, void_thick, void_height],
                            anchor = BOTTOM);
+                    // Tangential slot (radially thin), forming a cross
+                    cuboid([void_thick, void_radial, void_height],
+                           anchor = BOTTOM);
+                }
         }
 
         incised_lines(mercury_r, 24, depths=[1,small_line_factor]);
