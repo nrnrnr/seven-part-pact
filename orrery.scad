@@ -89,7 +89,7 @@ mercury_r = track_cr(4);
 zodiac_r  = zodiac_inner_r + zodiac_ring_width / 2 - wall_thickness/2;
 
 // Sun hole radial position: centered in zodiac ring
-sun_hole_r = board_radius - 2 - sun_hole_diameter / 2;
+sun_hole_r = board_radius - 3 - sun_hole_diameter / 2;
 
 // ---- Pentagon profiles (2D, for rotate_extrude) ----
 
