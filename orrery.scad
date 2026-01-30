@@ -9,6 +9,9 @@
 
 include <BOSL2/std.scad>
 
+$fa = 2;    // minimum angle (fine resolution)
+$fs = 0.4;  // minimum size (fine resolution)
+
 epsilon = 0.001;
 layer_height = 0.2;
 
@@ -167,16 +170,16 @@ module board() {
     difference() {
         // Solid base disc
         cyl(h = board_thickness, r = board_radius,
-            anchor = BOTTOM, $fn = circle_fn);
+            anchor = BOTTOM);
 
         // niche for moon thing
         translate([0,0,board_thickness + epsilon])
-          cyl(h = 2, r = center_void_radius - 1, anchor = TOP, $fn = circle_fn);
+          cyl(h = 2, r = center_void_radius - 1, anchor = TOP);
 
         // Cut pentagon-shaped track grooves from top surface
         translate([0, 0, board_thickness + epsilon])
             for (i = [0 : num_tracks - 1])
-                rotate_extrude($fn = circle_fn)
+                rotate_extrude()
                     groove_profile_2d(track_cr(i));
 
         // Sun peg holes: one centered in each month sector
@@ -240,13 +243,13 @@ module planet_arc(radius, span_months, incised_per_year = 24) {
     below_surface = pent_vertical_height + pent_angled_height - tolerance;
     // Place bottom on build plate: translate so bottom is at z=0
     translate([0, 0, below_surface])
-        rotate_extrude(angle = arc_angle, $fn = circle_fn)
+        rotate_extrude(angle = arc_angle)
             planet_profile_2d(radius);
 
     intersection() {
       incised_lines(radius, n = incised_per_year, depths=[small_line_factor*0.8], surface_z = 0,
                     length = 0.9 * pent_bottom_width);
-      rotate_extrude(angle = arc_angle, $fn = circle_fn)
+      rotate_extrude(angle = arc_angle)
         translate([radius,0])
           polygon([ [10,10], [-10, 10], [-10, -10], [10, -10]]);
     }
@@ -261,10 +264,10 @@ module sun_peg() {
     total_h = sun_hole_depth + sun_peg_above;
     union() {
         // Cylindrical shaft
-        cyl(h = total_h, d = peg_d, anchor = BOTTOM, $fn = 32);
+        cyl(h = total_h, d = peg_d, anchor = BOTTOM);
         // Rounded cap
         translate([0, 0, total_h])
-            sphere(r = peg_r, $fn = 32);
+            sphere(r = peg_r);
     }
 }
 
