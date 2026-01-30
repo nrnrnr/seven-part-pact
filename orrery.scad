@@ -188,6 +188,21 @@ module board() {
                         anchor = BOTTOM, $fn = 32);
         }
 
+        // Anti-warp voids under the zodiac ring, one per month.
+        // Thin rectangular slots (1mm tangential) spanning the zodiac ring
+        // cross-section.  Start at second layer, stop 10 layers from top.
+        void_bottom = 2 * layer_height;
+        void_top    = board_thickness - 10 * layer_height;
+        void_height = void_top - void_bottom;
+        for (m = [0 : num_months - 1]) {
+            angle = m * month_angle + month_angle / 2;
+            rotate([0, 0, angle])
+                translate([zodiac_inner_r + zodiac_ring_width / 2,
+                           0, void_bottom])
+                    cuboid([zodiac_ring_width - 2, 1, void_height],
+                           anchor = BOTTOM);
+        }
+
         incised_lines(mercury_r, 24, depths=[1,small_line_factor]);
         incised_lines(venus_r,   24, depths=[1,small_line_factor]);
         incised_lines(mars_r,    48, depths=[1,small_line_factor,small_line_factor,small_line_factor]);
