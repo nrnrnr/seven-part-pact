@@ -10,6 +10,7 @@
 include <BOSL2/std.scad>
 
 epsilon = 0.001;
+layer_height = 0.2;
 
 /* [Board Dimensions] */
 board_diameter = 210;  // mm
