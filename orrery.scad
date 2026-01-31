@@ -240,6 +240,18 @@ module board() {
     }
 }
 
+// ---- Finger-grip notch ----
+
+notch_width = 8.5;
+
+module notch_shape() {
+  translate([-notch_width/2,-epsilon,groove_depth+planet_protrusion-4-1])
+  rotate([-90,180,-90])
+    linear_extrude(notch_width)
+    polygon([[0,0], [3,4], [0,4]]);
+}
+    
+
 // ---- Planet arcs ----
 
 // Planet arc: pentagon cross-section swept through an arc.
@@ -249,19 +261,37 @@ module planet_arc(radius, span_months, incised_per_year = 24) {
     arc_angle = span_months * month_angle;
     // Total height: protrusion above surface + groove portion below surface
     below_surface = pent_vertical_height + pent_angled_height - tolerance;
-    // Place bottom on build plate: translate so bottom is at z=0
-    translate([0, 0, below_surface])
-        rotate_extrude(angle = arc_angle)
-            planet_profile_2d(radius);
 
-    intersection() {
-      incised_lines(radius, n = incised_per_year, depths=[small_line_factor*0.8], surface_z = 0,
-                    length = 0.9 * pent_bottom_width);
-      rotate_extrude(angle = arc_angle)
-        translate([radius,0])
-          polygon([ [10,10], [-10, 10], [-10, -10], [10, -10]]);
+   difference() {
+        union() {
+            // Place bottom on build plate: translate so bottom is at z=0
+            translate([0, 0, below_surface])
+                rotate_extrude(angle = arc_angle)
+                    planet_profile_2d(radius);
+
+            intersection() {
+              incised_lines(radius, n = incised_per_year, depths=[small_line_factor*0.8], surface_z = 0,
+                            length = 0.9 * pent_bottom_width);
+              rotate_extrude(angle = arc_angle)
+                translate([radius,0])
+                  polygon([ [10,10], [-10, 10], [-10, -10], [10, -10]]);
+            }
+        }
+
+        // notch on the X axis
+        translate([radius, 0, 0]) 
+          notch_shape();
+
+        // and the other end
+        rotate([0,0,arc_angle])
+          translate([radius,0,0])
+          mirror([0,1,0])
+          notch_shape();
     }
+
 }
+
+
 
 // ---- Sun peg ----
 
@@ -305,6 +335,9 @@ module render(part = "board") {
   else if (part == "jupiter") { flip() jupiter(); }
   else if (part == "saturn")  { flip() saturn(); }
   else if (part == "nonvenus")   { flip() { mercury(); mars(); jupiter(); saturn(); } }
+  else if (part == "notch") {
+    notch_shape();
+  }
   else if (part == "sun") {
       sun_peg();
   }
