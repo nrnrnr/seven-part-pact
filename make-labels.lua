@@ -133,18 +133,21 @@ io.stderr:write(string.format(
     "saturn_r=%.1f jupiter_r=%.1f mars_r=%.1f venus_r=%.1f mercury_r=%.1f\n",
     p.saturn_r, p.jupiter_r, p.mars_r, p.venus_r, p.mercury_r))
 
--- Planets with their parsed spans and computed radii
+-- Planets with their parsed spans and computed radii.
+-- radadj: radius adjustment for text curvature.  A positive value
+-- reduces the text-path radius (tighter curve) while shifting the
+-- text-path center outward so the label stays centered on the annulus.
 local planets = {
     { name="mercury", color="mercurycolor", symbol=[[\mercury]],
-      span=p.mercury_span, radius=p.mercury_r },
+      span=p.mercury_span, radius=p.mercury_r, radadj=5 },
     { name="venus",   color="venuscolor",   symbol=[[\venus]],
-      span=p.venus_span,   radius=p.venus_r },
+      span=p.venus_span,   radius=p.venus_r,   radadj=5 },
     { name="mars",    color="marscolor",    symbol=[[\mars]],
-      span=p.mars_span,    radius=p.mars_r },
+      span=p.mars_span,    radius=p.mars_r,    radadj=20 },
     { name="jupiter", color="jupitercolor", symbol=[[\jupiter]],
-      span=p.jupiter_span, radius=p.jupiter_r },
+      span=p.jupiter_span, radius=p.jupiter_r, radadj=2 },
     { name="saturn",  color="saturncolor",  symbol=[[\saturn]],
-      span=p.saturn_span,  radius=p.saturn_r },
+      span=p.saturn_span,  radius=p.saturn_r,  radadj=0 },
 }
 
 -- ---- Generate .tex ----
@@ -179,7 +182,7 @@ w([=[
 \definecolor{zodiacline}{HTML}{8B7355}
 \definecolor{zodiacborder}{HTML}{8B2500}
 \definecolor{mercurycolor}{HTML}{B0A0D0}
-\definecolor{venuscolor}{HTML}{3A6A2A}
+\definecolor{venuscolor}{HTML}{4A7A3A}
 \definecolor{marscolor}{HTML}{CC2222}
 \definecolor{jupitercolor}{HTML}{DDA866}
 \definecolor{saturncolor}{HTML}{888888}]=])
@@ -198,12 +201,17 @@ wf([[
 -- Planet arc label macro
 w([=[
 %% ---- Planet arc label macro ----
-%% \planetlabel{span_months}{fill_color}{name}{radius_mm}{symbol}
-\newcommand{\planetlabel}[5]{%
+%% \planetlabel{span_months}{fill_color}{name}{radius_mm}{symbol}{radius_adj}
+%% #6 = radius adjustment: positive values tighten the text curvature
+%% without moving the label, by reducing the text-path radius and
+%% shifting its center outward by the same amount.
+\newcommand{\planetlabel}[6]{%
   \pgfmathsetmacro{\arcangle}{#1 * \monthangle}%
   \pgfmathsetmacro{\innerr}{#4 - \groovehalfwidth}%
   \pgfmathsetmacro{\outerr}{#4 + \groovehalfwidth}%
   \pgfmathsetmacro{\midr}{#4}%
+  \pgfmathsetmacro{\textradius}{#4 - #6}%
+  \pgfmathsetmacro{\shiftangle}{\arcangle / 2}%
   %% Filled annular sector
   \fill[#2]
     (0:\innerr mm)
@@ -218,17 +226,21 @@ w([=[
     -- (\arcangle:\outerr mm)
     arc[start angle=\arcangle, end angle=0, radius=\outerr mm]
     -- cycle;
-  %% Curved text along the arc midline (reversed arc direction so text reads correctly)
-  \path[decorate, decoration={text along path,
-    text={|\sffamily\bfseries\large|#3 {#5}},
-    text align=center, raise=-0.5ex}]
-    (\arcangle:\midr mm)
-    arc[start angle=\arcangle, end angle=0, radius=\midr mm];
+  %% Curved text: radius reduced by #6 for tighter curvature,
+  %% center shifted outward by #6 so midpoint stays on the annulus.
+  \begin{scope}[shift={(\shiftangle:#6)}]
+    \path[decorate, decoration={text along path,
+      text={|\sffamily\bfseries\large|#3 {#5}},
+      text align=center, raise=-0.5ex}]
+      (\arcangle:\textradius mm)
+      arc[start angle=\arcangle, end angle=0, radius=\textradius mm];
+  \end{scope}
 }
 
 \begin{document}
 
 %% ==== Zodiac ring label (1:1 scale, one annular piece) ====
+\iffalse
 \noindent
 \hbox to \hsize{\hss
 \begin{tikzpicture}[x=1mm, y=1mm]]=])
@@ -245,9 +257,10 @@ wf([[
     p.board_radius, p.zodiac_inner_r,
     p.board_radius, p.zodiac_inner_r)
 
--- Sector dividing lines and text
+-- Sector dividing lines and curved text (text along path)
 -- Clockwise from top: Aries(0) at 75deg center, Taurus(1) at 45deg, etc.
--- Sector i: center_angle = 75 - i*30, boundary at 90 - i*30
+-- Sector i: boundary at 90 - i*30; arc spans boundary to boundary-30 (CW).
+-- CW arcs keep text top pointing outward (away from center).
 local zrw = p.zodiac_ring_width
 local text_sign_r = p.zodiac_inner_r + 0.76 * zrw
 local text_month_r = p.zodiac_inner_r + 0.52 * zrw
@@ -256,31 +269,37 @@ local text_attrs_r = p.zodiac_inner_r + 0.30 * zrw
 for i, z in ipairs(zodiac) do
     local idx = i - 1
     local boundary = 90 - idx * 30
-    local center   = boundary - 15
-
-    -- Text rotation: read outward along the radial bisector
-    local rot = center - 90
+    local lower    = boundary - 30
 
     -- Sign name (large, letter-spaced)
     local spaced = z.sign:upper():gsub("(.)", "%1\\,"):gsub("\\,$", "")
 
     wf([[
   \draw[zodiacline, line width=0.3mm] (%d:%.4f) -- (%d:%.4f);
-  \node[rotate=%.1f, text=zodiactext, font=\sffamily\bfseries\large]
-    at (%d:%.4f) {%s};
-  \node[rotate=%.1f, text=zodiactext, font=\sffamily\bfseries\small]
-    at (%d:%.4f) {%s};
-  \node[rotate=%.1f, text=zodiactext, font=\sffamily\itshape\tiny]
-    at (%d:%.4f) {%s};]],
+  \path[decorate, decoration={text along path,
+    text={|\sffamily\bfseries\large\color{zodiactext}|%s},
+    text align=center, raise=-0.5ex}]
+    (%d:%.4f mm) arc[start angle=%d, end angle=%d, radius=%.4f mm];
+  \path[decorate, decoration={text along path,
+    text={|\sffamily\bfseries\small\color{zodiactext}|%s},
+    text align=center, raise=-0.5ex}]
+    (%d:%.4f mm) arc[start angle=%d, end angle=%d, radius=%.4f mm];
+  \path[decorate, decoration={text along path,
+    text={|\sffamily\itshape\tiny\color{zodiactext}|%s},
+    text align=center, raise=-0.5ex}]
+    (%d:%.4f mm) arc[start angle=%d, end angle=%d, radius=%.4f mm];]],
        boundary, p.zodiac_inner_r, boundary, p.board_radius,
-       rot, center, text_sign_r, spaced,
-       rot, center, text_month_r, z.month,
-       rot, center, text_attrs_r, z.attrs)
+       spaced,
+       boundary, text_sign_r, boundary, lower, text_sign_r,
+       z.month,
+       boundary, text_month_r, boundary, lower, text_month_r,
+       z.attrs,
+       boundary, text_attrs_r, boundary, lower, text_attrs_r)
 end
 
 w([[
 \end{tikzpicture}\hss}
-
+\fi
 \raggedright
 
 ]])
@@ -290,11 +309,12 @@ for _, pl in ipairs(planets) do
     wf([[
 %% ==== %s arc label ====
 \begin{tikzpicture}[x=1mm, y=1mm]
-  \planetlabel{%.6f}{%s}{%s}{%.6f}{%s}
+  \planetlabel{%.6f}{%s}{%s}{%.6f}{%s}{%.6f}
 \end{tikzpicture}
 \quad
 ]],
-       pl.name, pl.span, pl.color, pl.name, pl.radius, pl.symbol)
+       pl.name, pl.span, pl.color, pl.name, pl.radius, pl.symbol,
+       pl.radadj)
 end
 
 w([[
