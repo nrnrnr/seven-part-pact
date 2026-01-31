@@ -138,15 +138,16 @@ io.stderr:write(string.format(
 -- reduces the text-path radius (tighter curve) while shifting the
 -- text-path center outward so the label stays centered on the annulus.
 local planets = {
-    { name="mercury", color="mercurycolor", symbol=[[\mercury]],
-      span=p.mercury_span, radius=p.mercury_r, radadj=5 },
-    { name="venus",   color="venuscolor",   symbol=[[\venus]],
-      span=p.venus_span,   radius=p.venus_r,   radadj=5 },
-    { name="mars",    color="marscolor",    symbol=[[\mars]],
+    { name="m e r c u r y ", color="mercurycolor", symbol=[[~~\mercury]],
+      span=p.mercury_span, radius=p.mercury_r, radadj=2 },
+    { name=[[v e n u s ]],   color="venuscolor!70",   symbol=[[~~\venus]],
+      span=p.venus_span,   radius=p.venus_r,   radadj=10 },
+    { name="m a r s ",    color="marscolor!80",    symbol=[[~~\mars]],
       span=p.mars_span,    radius=p.mars_r,    radadj=20 },
     { name="jupiter", color="jupitercolor", symbol=[[\jupiter]],
       span=p.jupiter_span, radius=p.jupiter_r, radadj=2 },
-    { name="saturn",  color="saturncolor",  symbol=[[\saturn]],
+    { name="saturn",  color="saturncolor!80",  symbol=[[\saturn]],
+      macro = [[stackedlabel]],
       span=p.saturn_span,  radius=p.saturn_r,  radadj=0 },
 }
 
@@ -173,6 +174,7 @@ w([=[
 \usepackage[margin=7mm]{geometry}
 \pagestyle{empty}
 \usepackage{tikz}
+%\usepackage{microtype}
 \usetikzlibrary{decorations.text}
 \usepackage{wasysym}  % \mercury \venus \mars \jupiter \saturn
 
@@ -237,11 +239,51 @@ w([=[
   \end{scope}
 }
 
+
+%% \planetlabel{span_months}{fill_color}{name}{radius_mm}{symbol}{radius_adj}
+\newcommand{\stackedlabel}[6]{% label on top of symbol
+  \pgfmathsetmacro{\arcangle}{#1 * \monthangle}%
+  \pgfmathsetmacro{\halfarcangle}{0.5 * \arcangle}%
+  \pgfmathsetmacro{\innerr}{#4 - \groovehalfwidth}%
+  \pgfmathsetmacro{\outerr}{#4 + \groovehalfwidth}%
+  \pgfmathsetmacro{\midr}{#4}%
+  \pgfmathsetmacro{\textradius}{#4 - #6 + 0.3 * \groovehalfwidth}%
+  \pgfmathsetmacro{\symbolradius}{#4 - #6 - 0.4 * \groovehalfwidth}%
+  \pgfmathsetmacro{\shiftradius}{#4 - #6}%
+  \pgfmathsetmacro{\shiftangle}{\arcangle / 2}%
+  %% Filled annular sector
+  \fill[#2]
+    (0:\innerr mm)
+    arc[start angle=0, end angle=\arcangle, radius=\innerr mm]
+    -- (\arcangle:\outerr mm)
+    arc[start angle=\arcangle, end angle=0, radius=\outerr mm]
+    -- cycle;
+  %% Outline
+  \draw[black, very thin]
+    (0:\innerr mm)
+    arc[start angle=0, end angle=\arcangle, radius=\innerr mm]
+    -- (\arcangle:\outerr mm)
+    arc[start angle=\arcangle, end angle=0, radius=\outerr mm]
+    -- cycle;
+  %% Curved text: radius reduced by #6 for tighter curvature,
+  %% center shifted outward by #6 so midpoint stays on the annulus.
+  \begin{scope}[shift={(\shiftangle:#6)}]
+    \path[decorate, decoration={text along path,
+      text={|\sffamily\bfseries\normalsize|#3},
+      text align=center, raise=-0.5ex}]
+      (\arcangle:\textradius mm)
+      arc[start angle=\arcangle, end angle=0, radius=\shiftradius mm];
+  \end{scope}
+
+  \draw (\halfarcangle:\symbolradius mm) node [rotate=90-\halfarcangle] {#5};
+}
+
 \begin{document}
 
 %% ==== Zodiac ring label (1:1 scale, one annular piece) ====
 \iffalse
 \noindent
+\typeout{zodiac}%
 \hbox to \hsize{\hss
 \begin{tikzpicture}[x=1mm, y=1mm]]=])
 
@@ -308,12 +350,15 @@ w([[
 for _, pl in ipairs(planets) do
     wf([[
 %% ==== %s arc label ====
+\typeout{%s}%%
 \begin{tikzpicture}[x=1mm, y=1mm]
-  \planetlabel{%.6f}{%s}{%s}{%.6f}{%s}{%.6f}
+  \%s{%.6f}{%s}{%s}{%.6f}{%s}{%.6f}
 \end{tikzpicture}
 \quad
 ]],
-       pl.name, pl.span, pl.color, pl.name, pl.radius, pl.symbol,
+       pl.name, pl.name:gsub('[^%w%s]', ' '),
+       pl.macro or 'planetlabel',
+       pl.span, pl.color, pl.name, pl.radius, pl.symbol,
        pl.radadj)
 end
 
