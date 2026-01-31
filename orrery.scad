@@ -289,15 +289,22 @@ module saturn()  { planet_arc(saturn_r,  saturn_span,  36); }
 
 // ---- Render selected part ----
 
+module flip() {
+  translate([0,0,pent_vertical_height+(pent_angled_height-tolerance)+planet_protrusion])
+    rotate([180,0,0])
+    children();
+}
+
 module render(part = "board") {
   if (part == "board") {
       board();
   }
-  else if (part == "venus")   { venus(); }
-  else if (part == "mercury") { mercury(); }
-  else if (part == "mars")    { mars(); }
-  else if (part == "jupiter") { jupiter(); }
-  else if (part == "saturn")  { saturn(); }
+  else if (part == "mercury") { flip() mercury(); }
+  else if (part == "venus")   { flip() venus(); }
+  else if (part == "mars")    { flip() mars(); }
+  else if (part == "jupiter") { flip() jupiter(); }
+  else if (part == "saturn")  { flip() saturn(); }
+  else if (part == "nonvenus")   { flip() { mercury(); mars(); jupiter(); saturn(); } }
   else if (part == "sun") {
       sun_peg();
   }
