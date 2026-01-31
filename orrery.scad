@@ -22,7 +22,7 @@ board_thickness = 10;  // mm (accommodates deeper grooves + solid base)
 function scaled(distance) = distance * board_diameter / 194;
 
 /* [Tolerance - gap per side between planet and track] */
-tolerance = 0.08;  // mm; adjust for your printer
+tolerance = 0.04;  // mm; adjust for your printer
 
 /* [Planet Arc Spans (months; 1 month = 30 degrees)] */
 mercury_span = 3.5;
