@@ -5,6 +5,7 @@
 \usepackage{suffix}
 \usepackage{tikz}
 \usepackage{adjustbox}
+\usetikzlibrary{calc}
 
 \usepackage{fontspec}
 %\newfontfamily\chunkyfont{Haettenschweiler}
@@ -13,6 +14,10 @@
   Renderer = HarfBuzz,
   Weight = 800
 ]
+
+\newcommand\expandArg[2]{\expandafter\applyExpanded\expandafter{#2}{#1}}
+\newcommand\applyExpanded[2]{#2{#1}}
+
 
 \begin{document}
 
@@ -56,21 +61,74 @@
 %\qquad
 %Gentry Heretic: \coin{102.2mm 20mm 124.6mm 40.5mm}
 
-\newcommand\peasantimage {\coin{8.2mm 112mm 27.2mm 129.8mm}}
-\newcommand\pariahimage  {\coin{8.2mm 76mm 27.2mm 94mm}}
-\newcommand\artisanimage {\coin{8.2mm 58.5mm 27.2mm 76mm}}
-\newcommand\merchantimage{\coin{46.6mm 40.5mm 65.2mm 58.2mm}}
-\newcommand\gentryimage  {\coin{8.2mm 20mm 29.2mm 40.5mm}}
+\newbox\peasantbox  % \foreach no good here because body inside group
+\newbox\pariahbox
+\newbox\artisanbox
+\newbox\merchantbox
+\newbox\gentrybox
 
-\WithSuffix\newcommand\peasantimage *{\coin{102.2mm 112mm 121.2mm 129.3mm}}
-\WithSuffix\newcommand\pariahimage  *{\coin{102.2mm 76mm 121.2mm 94mm}}
-\WithSuffix\newcommand\artisanimage *{\coin{102.2mm 58.5mm 121.2mm 76mm}}
-\WithSuffix\newcommand\merchantimage*{\coin{102.4mm 40.5mm 121.6mm 58.2mm}}
-\WithSuffix\newcommand\gentryimage  *{\coin{102.2mm 20mm 124.6mm 40.5mm}}
+\savebox\peasantbox {\coin{8.2mm 112mm 27.2mm 129.8mm}}
+\savebox\pariahbox  {\coin{8.2mm 76mm 27.2mm 94mm}}
+\savebox\artisanbox {\coin{8.2mm 58.5mm 27.2mm 76mm}}
+\savebox\merchantbox{\coin{46.6mm 40.5mm 65.2mm 58.2mm}}
+\savebox\gentrybox  {\coin{8.2mm 20mm 29.2mm 40.5mm}}
+
+\def\peasantimage{\usebox\peasantbox}
+\def\pariahimage{\usebox\pariahbox}
+\def\artisanimage{\usebox\artisanbox}
+\def\merchantimage{\usebox\merchantbox}
+\def\gentryimage{\usebox\gentrybox}
+
+\newbox\Rpeasantbox  % \foreach no good here because body inside group
+\newbox\Rpariahbox
+\newbox\Rartisanbox
+\newbox\Rmerchantbox
+\newbox\Rgentrybox
+
+\savebox\Rpeasantbox {\coin{102.2mm 112mm 121.2mm 129.3mm}}  
+\savebox\Rpariahbox  {\coin{102.2mm 76mm 121.2mm 94mm}}      
+\savebox\Rartisanbox {\coin{102.2mm 58.5mm 121.2mm 76mm}}    
+\savebox\Rmerchantbox{\coin{102.4mm 40.5mm 121.6mm 58.2mm}}  
+\savebox\Rgentrybox  {\coin{102.2mm 20mm 124.6mm 40.5mm}}    
+
+
+\WithSuffix\newcommand\peasantimage *{\usebox{\Rpeasantbox }}
+\WithSuffix\newcommand\pariahimage  *{\usebox{\Rpariahbox  }}
+\WithSuffix\newcommand\artisanimage *{\usebox{\Rartisanbox }}
+\WithSuffix\newcommand\merchantimage*{\usebox{\Rmerchantbox}}
+\WithSuffix\newcommand\gentryimage  *{\usebox{\Rgentrybox  }}
 
 %\peasantimage\ \pariahimage\ \artisanimage\ \merchantimage\ \gentryimage
 
 %\peasantimage*\ \pariahimage*\ \artisanimage*\ \merchantimage*\ \gentryimage*
+
+\newcommand\northsouth[5][3mm]{% [shift]{angle}{northtext}{southtext}{image}
+  \node [white,anchor=north,yshift=-1*#1,rotate=#2] at (#5.north) {#3};
+  \node [white,anchor=south,yshift=#1,rotate=#2] at (#5.south) {#4};
+}
+
+\newcommand\gamepiece[6]{% {basename}{width}{height}{diameter}{recto}{verso}
+  \begingroup
+  \def\basename{#1}%
+  \pgfmathsetmacro\width{#2-2.5}%
+  \pgfmathsetmacro\height{#3-2.5}%
+  \def\diameter{#4}%
+  \def\recto{#5}%
+  \def\verso{#6}%
+  \typeout{\basename: width=\width, height=\height, diameter=\diameter}%
+  \begin{tikzpicture}[x=1mm,y=1mm]
+     \large
+     \node [rotate=180] (recto) at (0,0.5*\height) {\csname#1image\endcsname};
+     \node (verso) at (0,-0.5*\height) {\expandafter\usebox\csname R\basename box\endcsname};
+     \draw (-0.5*\width,-\height) rectangle ++(\width,2*\height);
+     \draw [ultra thin] (-0.5*\width,0) -- ++(\width,0);
+%     \draw [blue,thick] (0,0.5*\height) circle [radius=0.5*\diameter];
+%     \draw [blue,thick] (0,-0.5*\height) circle [radius=0.5*\diameter];
+     \northsouth[-2.5mm]{180}#5{recto}     
+     \northsouth{0}#6{verso}     
+  \end{tikzpicture}
+  \endgroup
+}
 
 
 \newcommand\person[3]{%
@@ -92,20 +150,57 @@
 %1 Gentry Token (front side: +3 Wealth +2 Blasphemy / back side: Heretic +5 Sway)
 
 
+%\newcommand\peasant{%
+%  \person{peasant}{\textminus 1 W~~}{\textminus 1 B~~}}
+
 \newcommand\peasant{%
-  \person{peasant}{\textminus 1 W~~}{\textminus 1 B~~}}
+  \gamepiece{peasant}{22}{22}{18}{{\textminus 1 W~~}{\textminus 1 B~~}}{{}{+2 \normalsize Sway}}%
+}
 
 \newcommand\pariah{%
-  \person{pariah}{\textminus 2 W~~}{\textminus 2 B~~}}
+  \gamepiece{pariah}{22}{22}{18}{{\textminus 2 W~~}{\textminus 2 B~~}}{{}{+4 \normalsize Sway}}%
+}
 
 \newcommand\artisan{%
-  \person{artisan}{+1 W~~}{}}
+  \gamepiece{artisan}{22}{22}{18}{{}{+1 W~~}}{{}{+1 \normalsize Sway}}%
+}
 
 \newcommand\merchant{%
-  \person{merchant}{+2 W~~}{+1 B~~}}
+  \gamepiece{merchant}{23}{23}{19}{{+2 W~~}{+1 B~~}}{{}{+3 \normalsize Sway}}%
+}
 
 \newcommand\gentry{%
-  \person{gentry}{+3 W~~}{+2 B~~}}
+  \gamepiece{gentry}{26}{26}{22}{{+3 W~~}{+2 B~~}}{{}{+5 \normalsize Sway}}%
+}
+
+\begin{center}
+\begin{tabular}{ccccc}
+\rotatebox{180}{Peasant}&
+\rotatebox{180}{Pariah}&
+\rotatebox{180}{Artisan}&
+\rotatebox{180}{Merchant}&
+\rotatebox{180}{Gentry}
+\\[10pt]
+\peasant
+&
+\pariah
+&
+\artisan
+&
+\merchant
+&
+\gentry
+\\
+Peasant&
+Pariah&
+Artisan&
+Merchant&
+Gentry
+\\
+\end{tabular}
+\end{center}
+
+
 
 
 %\vskip 2\baselineskip
@@ -137,39 +232,49 @@
 %\heretic{merchant}{+3}
 %\heretic{gentry}{+5}
 
+
+\newpage
+
+\baselineskip=54mm
+
 \foreach \i in {1,...,15} {
-  \peasant\heretic{peasant}{+2}
+  \peasant
+  \hskip 2em plus 1em minus 1em
+}
+%
+%\vskip 2\baselineskip
+%
+\qquad
+\foreach \i in {1,...,2} {
+  \merchant
+  \hskip 2em plus 1em minus 1em
+}
+%
+%\vskip 2\baselineskip
+%
+\foreach \i in {1,...,1} {
+  \gentry
   \hskip 2em plus 1em minus 1em
 }
 
-\vskip 2\baselineskip
+
+
 
 \foreach \i in {1,...,5} {
-  \pariah\heretic{pariah}{+2}
+  \pariah
   \hskip 2em plus 1em minus 1em
 }
 
-\vskip 2\baselineskip
+
+
+%\vskip 2\baselineskip
 
 \foreach \i in {1,...,3} {
-  \artisan\heretic{artisan}{+2}
+  \artisan
   \hskip 2em plus 1em minus 1em
 }
 
-\vskip 2\baselineskip
-
-\foreach \i in {1,...,2} {
-  \merchant\heretic{merchant}{+2}
-  \hskip 2em plus 1em minus 1em
-}
-
-\vskip 2\baselineskip
-
-\foreach \i in {1,...,1} {
-  \gentry\heretic{gentry}{+2}
-  \hskip 2em plus 1em minus 1em
-}
-
+%\vskip 2\baselineskip
 
 
 

@@ -77,6 +77,7 @@ local function parse_scad(filename)
         end
     end
     f:close()
+--require 'inspect'.show(p)
     return p
 end
 
@@ -84,7 +85,7 @@ end
 local function derive(p)
     p.board_radius    = p.board_diameter / 2
     p.month_angle     = 30
-    p.zodiac_inner_r  = p.board_radius - p.zodiac_ring_width
+    p.zodiac_inner_r  = p.board_radius - p.zodiac_ring_width - 0.9 -- correction
 
     local nt = 5  -- num_tracks
     local region = p.zodiac_inner_r - p.center_void_radius
@@ -127,8 +128,8 @@ local p = derive(parse_scad(scad_file))
 
 -- Diagnostic output to stderr
 io.stderr:write(string.format(
-    "board_radius=%.1f zodiac_inner_r=%.1f groove_width=%.2f\n",
-    p.board_radius, p.zodiac_inner_r, p.groove_width))
+    "board_radius=%.1f zodiac_inner_d=%.1f groove_width=%.2f\n",
+    p.board_radius, 2 * p.zodiac_inner_r, p.groove_width))
 io.stderr:write(string.format(
     "saturn_r=%.1f jupiter_r=%.1f mars_r=%.1f venus_r=%.1f mercury_r=%.1f\n",
     p.saturn_r, p.jupiter_r, p.mars_r, p.venus_r, p.mercury_r))
@@ -171,13 +172,13 @@ w([=[
 %% Compile with: lualatex orrery.tex  (or pdflatex)
 
 \documentclass{article}
+\usepackage{wasysym}  % \mercury \venus \mars \jupiter \saturn
 \usepackage[margin=7mm]{geometry}
 \pagestyle{empty}
 \usepackage{tikz}
 \usepackage{fontspec}
 \setmainfont{Minion Pro}
 \usetikzlibrary{decorations.text}
-\usepackage{wasysym}  % \mercury \venus \mars \jupiter \saturn
 
 %% ---- Colors ----
 \definecolor{zodiacbg}{HTML}{FFFFFF}
@@ -282,19 +283,18 @@ w([=[
 \begin{document}
 
 %% ==== Zodiac ring label (1:1 scale, one annular piece) ====
-\iftrue
-\noindent
-\typeout{zodiac}%
-\hbox to \hsize{\hss
-\begin{tikzpicture}[x=1mm, y=1mm]]=])
+
+\newcommand\zodiac{%
+  \typeout{zodiac}%
+  \begin{tikzpicture}[x=1mm, y=1mm]]=])
 
 -- Filled black annulus and border rings
 wf([[
-  \fill[zodiacbg] (0,0) circle (%.4f);
-  \fill[white] (0,0) circle (%.4f);
+    \fill[zodiacbg] (0,0) circle (%.4f);
+    \fill[white] (0,0) circle (%.4f);
 
-  \draw[zodiacborder, line width=0.8mm] (0,0) circle (%.4f);
-  \draw[zodiacborder, line width=0.4mm] (0,0) circle (%.4f);
+    \draw[zodiacborder, line width=0.8mm] (0,0) circle (%.4f);
+    \draw[zodiacborder, line width=0.4mm] (0,0) circle (%.4f);
 
   %% Sector dividers and text]],
     p.board_radius, p.zodiac_inner_r,
@@ -305,9 +305,13 @@ wf([[
 -- Sector i: boundary at 90 - i*30; arc spans boundary to boundary-30.
 -- NOTE: \, (thin space) in text causes text-along-path to loop; use plain text.
 local zrw = p.zodiac_ring_width
-local text_sign_r  = p.zodiac_inner_r + 0.75 * zrw
-local text_month_r = p.zodiac_inner_r + 0.48 * zrw
-local text_attrs_r = p.zodiac_inner_r + 0.15 * zrw
+local text_sign_r  = p.zodiac_inner_r + 0.53 * zrw
+local text_month_r = p.zodiac_inner_r + 0.28 * zrw
+local text_attrs_r = p.zodiac_inner_r + 0.10 * zrw
+
+local sun_hole_diameter = 4;
+local sun_hole_r = p.board_radius - 3 - sun_hole_diameter / 2;
+
 
 for i, z in ipairs(zodiac) do
     local idx = i - 1
@@ -317,19 +321,19 @@ for i, z in ipairs(zodiac) do
     -- Sign name in uppercase (no \, — causes text-along-path to loop)
 
     wf([[
-  \draw[zodiacline, line width=0.3mm] (%d:%.4f) -- (%d:%.4f);
-  \path[decorate, decoration={text along path,
-    text={|\bfseries\fontsize{24pt}{28pt}\selectfont\color{zodiactext}|%s},
-    text align=center, raise=-0.5ex}]
-    (%d:%.4f mm) arc[start angle=%d, end angle=%d, radius=%.4f mm];
-  \path[decorate, decoration={text along path,
-    text={|\bfseries\fontsize{15pt}{18pt}\selectfont\color{zodiactext}|%s},
-    text align=center, raise=-0.5ex}]
-    (%d:%.4f mm) arc[start angle=%d, end angle=%d, radius=%.4f mm];
-  \path[decorate, decoration={text along path,
-    text={|\itshape\small\color{zodiactext}|%s},
-    text align=center, raise=-0.5ex}]
-    (%d:%.4f mm) arc[start angle=%d, end angle=%d, radius=%.4f mm];]],
+    \draw[zodiacline, line width=0.3mm] (%d:%.4f) -- (%d:%.4f);
+    \path[decorate, decoration={text along path,
+      text={|\bfseries\fontsize{24pt}{28pt}\selectfont\color{zodiactext}|%s},
+      text align=center, raise=-0.5ex}]
+      (%d:%.4f mm) arc[start angle=%d, end angle=%d, radius=%.4f mm];
+    \path[decorate, decoration={text along path,
+      text={|\bfseries\fontsize{15pt}{18pt}\selectfont\color{zodiactext}|%s},
+      text align=center, raise=-0.5ex}]
+      (%d:%.4f mm) arc[start angle=%d, end angle=%d, radius=%.4f mm];
+    \path[decorate, decoration={text along path,
+      text={|\itshape\small\color{zodiactext}|%s},
+      text align=center, raise=-0.5ex}]
+      (%d:%.4f mm) arc[start angle=%d, end angle=%d, radius=%.4f mm];]],
        boundary, p.zodiac_inner_r, boundary, p.board_radius,
        z.sign,
        boundary, text_sign_r, boundary, lower, text_sign_r,
@@ -337,11 +341,21 @@ for i, z in ipairs(zodiac) do
        boundary, text_month_r, boundary, lower, text_month_r,
        z.attrs,
        boundary, text_attrs_r, boundary, lower, text_attrs_r)
+
+  wf([[\draw [thick] (%d:%.4fmm) circle [radius=%.4fmm];
+     ]], (boundary+lower)/2.0, sun_hole_r, sun_hole_diameter/2.0)
+
 end
 
+
 w([[
-\end{tikzpicture}\hss}
-\fi
+  \end{tikzpicture}%
+}
+
+\hbox to \hsize{\kern 0.4\hsize\rlap{\zodiac}}
+
+\hbox to \hsize{\kern 0.6\hsize\llap{\zodiac}}
+
 \raggedright
 
 ]])

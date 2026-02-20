@@ -245,7 +245,7 @@ module board() {
 notch_width = 8.5;
 
 module notch_shape() {
-  translate([-notch_width/2,-epsilon,groove_depth+planet_protrusion-4-1])
+  translate([-notch_width/2,-epsilon,groove_depth+planet_protrusion-4-1+0.4])
   rotate([-90,180,-90])
     linear_extrude(notch_width)
     polygon([[0,0], [3,4], [0,4]]);
@@ -293,20 +293,55 @@ module planet_arc(radius, span_months, incised_per_year = 24) {
 
 
 
-// ---- Sun peg ----
+// ---- Sun piece ----
 
-// Sun peg: cylinder with a rounded top, fits into the sun holes.
-module sun_peg() {
+// Spine point for a curved ray at parameter t (0 = base, 1 = tip).
+// Ray starts at disk edge, extends outward while curling by curl_angle degrees.
+function ray_spine(t, disk_r, ray_len, curl_angle) =
+    let(
+        r = disk_r + t * ray_len,
+        a = t * t * curl_angle  // quadratic curl for smooth curve
+    )
+    [r * cos(a), r * sin(a)];
+
+// Ray width tapers from base_width at t=0 to zero at t=1.
+function ray_width(t, base_width) = base_width * pow(1 - t, 1.3);
+
+// Single curved ray (2D), pointing along +X from the disk edge.
+// Built as a chain of hulled circles along a curved spine.
+module curved_ray(disk_r, ray_len, curl_angle, base_width, n = 12) {
+    for (i = [0 : n - 1])
+        hull() {
+            translate(ray_spine(i/n, disk_r, ray_len, curl_angle))
+                circle(d = max(ray_width(i/n, base_width), 0.1));
+            translate(ray_spine((i+1)/n, disk_r, ray_len, curl_angle))
+                circle(d = max(ray_width((i+1)/n, base_width), 0.1));
+        }
+}
+
+// Sun game piece: decorative disk with curvy rays and a peg underneath.
+// Disk bottom at z=0, decorative face at z=sun_thick, peg below z=0.
+module sun_piece() {
+    sun_disk_d     = 15;    // mm - central disk diameter
+    sun_disk_r     = sun_disk_d / 2;
+    ray_length     = 8;     // mm - how far rays extend beyond disk edge
+    ray_curl       = 35;    // degrees of curl over the ray length
+    ray_base_width = 5;     // mm - width at ray base
+    num_rays       = 12;
+    sun_thick      = 2.5;   // mm - thickness of disk and rays
     peg_d = sun_hole_diameter - 2 * tolerance;
-    peg_r = peg_d / 2;
-    total_h = sun_hole_depth + sun_peg_above;
-    union() {
-        // Cylindrical shaft
-        cyl(h = total_h, d = peg_d, anchor = BOTTOM);
-        // Rounded cap
-        translate([0, 0, total_h])
-            sphere(r = peg_r);
+    peg_h = board_thickness;  // peg length to sit in hole
+
+    // Disk and curved rays
+    linear_extrude(height = sun_thick) {
+        circle(r = sun_disk_r);
+        for (i = [0 : num_rays - 1])
+            rotate([0, 0, i * 360 / num_rays])
+                curved_ray(sun_disk_r, ray_length, ray_curl, ray_base_width);
     }
+
+    // Peg extending below (into the board hole)
+    cyl(h = peg_h, d = peg_d, anchor = TOP);
 }
 
 // ---- Individual planet modules ----
@@ -334,7 +369,7 @@ module render(part = "board") {
   else if (part == "mars")    { flip() mars(); }
   else if (part == "jupiter") { flip() jupiter(); }
   else if (part == "saturn")  { flip() saturn(); }
-  else if (part == "nonvenus")   { flip() { mercury(); mars(); jupiter(); saturn(); } }
+  else if (part == "planets")   { flip() { mercury(); venus(); mars(); jupiter(); saturn(); } }
   else if (part == "notch") {
     notch_shape();
   }
