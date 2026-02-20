@@ -7,3 +7,5 @@
 *.stl
 *-page-[0-9]*.png
 /orrery.pdf
+/orrery.tex
+/popdimens.scad
