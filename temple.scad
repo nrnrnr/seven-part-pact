@@ -1,5 +1,7 @@
 // WTF people
 
+// low tray uses 36g of filament
+
 include <BOSL2/std.scad>
 
 $fa = 2;    // minimum angle (fine resolution)
@@ -97,6 +99,7 @@ module octowell() {
     rotate([90,0,0])
       linear_extrude(octagon.y)
       ngon(8, apothem = apothem);
+    cube([2 * apothem, octagon.y, 5 * apothem], anchor = BOTTOM+BACK);
   }
 }
 
@@ -156,7 +159,9 @@ module main() {
 
 
 
-main();
+% main();
+
+translate([0,0,50]) negdisplay();
 
 
 //color("blue") octowells();
