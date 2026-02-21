@@ -1,5 +1,5 @@
 
-all:V: orrboard.stl orrery.pdf pop-stl
+all:V: orrboard.stl orrery.pdf pop-stl temple.stl
 
 POPS=peasant pariah artisan merchant gentry
 
@@ -7,6 +7,9 @@ pop-stl:V: ${POPS:%=pop%.stl}
 
 orr&.stl: orrery.scad
 	openscad-nightly -D mything='"'$stem'"' -o $target $prereq
+
+temple.stl: temple.scad
+	openscad-nightly -o $target $prereq
 
 pop&.stl: populace.scad popdimens.scad octagon.scad
 	openscad-nightly -D mything='"'$stem'"' -o $target populace.scad
