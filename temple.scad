@@ -10,6 +10,8 @@ $fs = 0.4;  // minimum size (fine resolution)
 epsilon = 0.001;
 layer_height = 0.2;
 
+inch = 25.4;
+
 function bigger(d) = [d.x+2*epsilon, d.y+2*epsilon, d.z+2*epsilon];
 
 function polar(r, a) = [r*cos(a), r*sin(a)];
@@ -39,15 +41,19 @@ row_count = 5;
 row_sep = 2;
 
 display = [5 * octagon.x + 4 * row_sep, octagon.y, 17]; // excludes walls
-tray = [display.x, max(28,diceblock.y-2*wall), 7];
+tray = [display.x, max(28,(diceblock.y-2*wall)*cos(dicetheta)), 7];
 
 theta = 65;
+
+front_display_z = floor + tray.z + (diceblock.y-wall)*sin(dicetheta);
+
+text_thickness = wall/2;
 
 front = wall;
 
 block = [display.x + 2*wall,
          front + tray.y + 2 * (display.y * sin(theta) + display.z * cos(theta)) + wall,
-         floor + tray.z + 2 * (display.z * sin(theta))
+         front_display_z + 2 * (display.z * sin(theta))
          ];
 
 lip = [display.x, 1, 4];
@@ -79,7 +85,7 @@ module dice() {
   base = [diceblock.x, diceblock.y * cos(dicetheta), 100];
   difference() {
     cube([diceblock.x, diceblock.y * cos(dicetheta), 100]);
-    translate([-epsilon,-epsilon,diceblock.z])
+    translate([-epsilon,-epsilon,tray.z+floor-wall *sin(dicetheta)])
       rotate([dicetheta,0,0])
       cube(bigger([diceblock.x, 100, 100]));
     translate([wall,wall + diewelldepth*sin(dicetheta),diceblock.z-0.3*dieside])
@@ -90,6 +96,14 @@ module dice() {
     }
   }
 }
+
+module letter(s) {
+  translate([0,text_thickness,0.15*tray.z])
+  rotate([90,0,0])
+  linear_extrude(text_thickness)
+    text(s, size = 0.8 * tray.z, font="Arial Bold", halign="center");
+}
+
 
 
 
@@ -119,6 +133,19 @@ module negdisplay() {
   }      
 }
 
+card_thickness = 0.6;
+card_bezel = 4;
+
+module label_rack() {
+  fd_z = front_display_z;
+  difference() {
+    cube([2*wall + 3*inch, wall, fd_z - floor], anchor=BOTTOM+BACK);
+    translate([0,epsilon,0])
+    cube([3*inch, card_thickness + 2 *epsilon, 2 * fd_z], anchor=BOTTOM+BACK);
+    translate([0,-epsilon,0])
+    cube(bigger([3*inch-2*card_bezel, wall, 2 * fd_z]), anchor=BOTTOM+BACK);
+  }
+}
 
   
 
@@ -127,44 +154,58 @@ display_vector = // from front of one display to front of next
 
 module main() {
   fd_y = front + tray.y; // + display.y * sin(theta);
+  fd_z = front_display_z;
   difference() {
-    cube(block, center=false);
-    translate([wall, front, floor])
-      cube(tray, center=false);
-    translate([-epsilon,-epsilon,floor+tray.z-epsilon])
-      cube([block.x + 2 * epsilon, tray.y + front + epsilon, block.z]);
-   translate([wall, fd_y, floor+tray.z]) {
-      negdisplay();
-      translate(display_vector)
-        negdisplay();
-   }
-   translate([0, fd_y, floor + tray.z])
-     rotate([theta-90,0,0])
-     translate([-epsilon,-fd_y,-epsilon])
-     cube([block.x + 2 * epsilon, fd_y, block.z]);
+    union() {
+      difference() {
+        cube(block, center=false);
+        translate([wall, front, floor]) // tray well
+          cube(tray, center=false);
+        translate([-epsilon,-epsilon,floor+tray.z-epsilon]) // shorten walls
+                                                            // around well
+          cube([block.x + 2 * epsilon, tray.y + front + epsilon, block.z]);
+        translate([wall, fd_y, fd_z]) { // wells for display
+          negdisplay();
+          translate(display_vector)
+            negdisplay();
+       }
+       translate([0, fd_y, fd_z]) // slant side walls of displays
+         rotate([theta-90,0,0])
+         translate([-epsilon,-fd_y,-epsilon])
+         cube([block.x + 2 * epsilon, fd_y, block.z]);
+      }
+      translate([wall-epsilon, fd_y, fd_z]) { // lips
+        rotate([theta-90, 0, 0])
+        cube(bigger(lip), anchor=LEFT+FRONT+BOTTOM);
+        translate(display_vector)
+          rotate([theta-90, 0, 0])
+          cube(bigger(lip), anchor=LEFT+FRONT+BOTTOM);
+      }
+      dice();
+      translate([block.x - diceblock.x, 0, 0])
+        dice();
+    }
+    translate([wall+diewellside/2,-epsilon,0])
+      letter("W");
+    translate([block.x-(wall+diewellside/2),-epsilon,0])
+      letter("B");
+    translate([block.x/2, tray.y-epsilon, fd_z]) {
+      cylinder(d=17,h=wall/cos(theta)+1,orient=BACK);
+      cube([17,wall/cos(theta)+1,17],anchor=BOTTOM+FRONT);
+    }      
   }
-  translate([wall-epsilon, fd_y, floor+tray.z]) {
-    rotate([theta-90, 0, 0])
-    cube(bigger(lip), anchor=LEFT+FRONT+BOTTOM);
-    translate(display_vector)
-      rotate([theta-90, 0, 0])
-      cube(bigger(lip), anchor=LEFT+FRONT+BOTTOM);
-  }
-  dice();
-  translate([block.x - diceblock.x, 0, 0])
-    dice();
-
-
+  translate([block.x/2, front+tray.y, floor])
+    label_rack();
 }
 
 
 
-% main();
-
-translate([0,0,50]) negdisplay();
+main();
 
 
-//color("blue") octowells();
+//translate([0,0,50]) negdisplay();
+
+
 
 //negdisplay();
 
