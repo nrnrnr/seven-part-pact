@@ -1,5 +1,8 @@
+TEMPLES=Krolis Notor Zephon Ushin
 
 all:V: orrboard.stl orrery.pdf pop-stl temple.stl
+
+temples:V: ${TEMPLES:%=labeled-%.stl}
 
 POPS=peasant pariah artisan merchant gentry
 
@@ -7,6 +10,9 @@ pop-stl:V: ${POPS:%=pop%.stl}
 
 orr&.stl: orrery.scad
 	openscad-nightly -D mything='"'$stem'"' -o $target $prereq
+
+labeled-&.stl: temple.scad
+	openscad-nightly -D mainlabel='"'$stem'"' -o $target $prereq
 
 temple.stl: temple.scad
 	openscad-nightly -o $target $prereq

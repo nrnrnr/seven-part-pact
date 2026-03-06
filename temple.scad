@@ -104,11 +104,13 @@ module dice() {
   }
 }
 
-module letter(s) {
+default_letter_size = 5.6;
+
+module letter(s, size = default_letter_size) {
   translate([0,text_thickness,0.15*front_height+1])
   rotate([90,0,0])
   linear_extrude(text_thickness)
-    text(s, size = 0.8 * front_height, font="Arial Bold", halign="center");
+    text(s, size = size, font="Arial Bold", halign="center");
 }
 
 
@@ -144,14 +146,17 @@ module negdisplay() {
 card_thickness = 0.6;
 card_bezel = 4;
 
-module label_rack() {
-  height = display.z + 16;
+doctrine_clearance = 9; // space for octagons sticking up
+doctrine_height = 20;
+
+module doctrine_rack() {
+  height = display.z + doctrine_clearance + doctrine_height;
   w = 3 * inch + 4; // leave room
   difference() {
     cube([2*wall + w, 2 * wall, height], anchor=BOTTOM+FRONT);
-    translate([0,-epsilon,display.z])
+    translate([0,-epsilon,display.z+doctrine_clearance])
     cube([w-2*card_bezel, wall, height], anchor=BOTTOM+FRONT);
-    translate([0,wall,display.z])
+    translate([0,wall,display.z+doctrine_clearance])
     cube([w, card_thickness + 2 *epsilon, height], anchor=BOTTOM);
   }
 }
@@ -161,7 +166,7 @@ module label_rack() {
 display_vector = // from front of one display to front of next
   [0,display.z * cos(theta) + display.y * sin(theta), display.z * sin(theta)];
 
-module main() {
+module main(label="") {
   fd_y = front + wall; // + display.y * sin(theta);
   fd_z = front_display_z;
   lip_height = display.z - 4;
@@ -192,8 +197,11 @@ module main() {
     translate([display.x+1.5*diceblock.x,-epsilon,0])
       letter("C");
     for(i=[0:1:4]) 
-      translate([octagon.x/2+diceblock.x+wall+i*(octagon.x+row_sep),-epsilon,lip_height/2-2])
-        letter(str(i));
+      translate([octagon.x/2+diceblock.x+wall+i*(octagon.x+row_sep),-epsilon,lip_height/2-1])
+        letter(str(i), size = default_letter_size / 1.2);
+
+    translate([octagon.x/2+diceblock.x+wall+2*(octagon.x+row_sep),-epsilon,-0.8])
+      letter(label);
 
 //    translate([block.x/2, tray.y-epsilon, fd_z]) {
 //      cylinder(d=17,h=wall/cos(theta)+1,orient=BACK);
@@ -201,14 +209,14 @@ module main() {
 //    }      
   }
   translate([diceblock.x + display.x/2, display.y, 0])
-    label_rack();
+    doctrine_rack();
 }
 
+mainlabel = "Ushin";
 
+main(mainlabel);
 
-main();
-
-//label_rack();
+//doctrine_rack();
 
 
 //translate([0,0,50]) negdisplay();
