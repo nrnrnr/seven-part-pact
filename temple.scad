@@ -145,14 +145,14 @@ card_thickness = 0.6;
 card_bezel = 4;
 
 module label_rack() {
-  fd_z = front_display_z;
+  height = display.z + 16;
   w = 3 * inch + 4; // leave room
   difference() {
-    cube([2*wall + w, wall, fd_z - floor], anchor=BOTTOM+BACK);
-    translate([0,epsilon,0])
-    cube([w, card_thickness + 2 *epsilon, 2 * fd_z], anchor=BOTTOM+BACK);
-    translate([0,-epsilon,0])
-    cube(bigger([w-2*card_bezel, wall, 2 * fd_z]), anchor=BOTTOM+BACK);
+    cube([2*wall + w, 2 * wall, height], anchor=BOTTOM+FRONT);
+    translate([0,-epsilon,display.z])
+    cube([w-2*card_bezel, wall, height], anchor=BOTTOM+FRONT);
+    translate([0,wall,display.z])
+    cube([w, card_thickness + 2 *epsilon, height], anchor=BOTTOM);
   }
 }
 
@@ -200,13 +200,15 @@ module main() {
 //      cube([17,wall/cos(theta)+1,17],anchor=BOTTOM+FRONT);
 //    }      
   }
-  translate([block.x/2, 0, floor])
+  translate([diceblock.x + display.x/2, display.y, 0])
     label_rack();
 }
 
 
 
 main();
+
+//label_rack();
 
 
 //translate([0,0,50]) negdisplay();
