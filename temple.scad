@@ -164,24 +164,18 @@ display_vector = // from front of one display to front of next
 module main() {
   fd_y = front + wall; // + display.y * sin(theta);
   fd_z = front_display_z;
+  lip_height = display.z - 4;
   difference() {
     union() {
       difference() {
         translate([diceblock.x-epsilon,0,0])
           cube(display, center=false);
-//        translate([wall, front, floor]) // tray well
-//          cube(tray, center=false);
-//        translate([-epsilon,-epsilon,floor+front_height-epsilon]) // shorten walls
-//                                                            // around well
-//          cube([block.x + 2 * epsilon, tray.y + front + epsilon, block.z]);
         translate([wall, fd_y, fd_z]) { // wells for display
           negdisplay();
        }
-//       translate([0, fd_y, fd_z]) // slant side walls of displays
-//         rotate([theta-90,0,0])
-//         translate([-epsilon,-fd_y,-epsilon])
-//         cube([block.x + 2 * epsilon, fd_y, block.z]);
       }
+      translate([diceblock.x,0,0])
+        cube([display.x, wall, lip_height]);
 //      translate([wall-epsilon, fd_y, fd_z]) { // lips
 //        rotate([theta-90, 0, 0])
 //        cube(bigger(lip), anchor=LEFT+FRONT+BOTTOM);
@@ -198,7 +192,7 @@ module main() {
     translate([display.x+1.5*diceblock.x,-epsilon,0])
       letter("C");
     for(i=[0:1:4]) 
-      translate([octagon.x/2+diceblock.x+wall+i*(octagon.x+row_sep),-epsilon,0])
+      translate([octagon.x/2+diceblock.x+wall+i*(octagon.x+row_sep),-epsilon,lip_height/2-2])
         letter(str(i));
 
 //    translate([block.x/2, tray.y-epsilon, fd_z]) {
